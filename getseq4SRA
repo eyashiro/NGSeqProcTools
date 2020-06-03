@@ -1,0 +1,434 @@
+#!/bin/bash
+
+#VERSIONNUMBER=1.0
+MODIFIEDDATE="2 June, 2020"
+
+###################################################################################################
+#
+# getseq4SRA
+#
+# Utility tool in NGSeqProcTools
+#
+# This script retrieves the raw fastq files from a list of names in the samples file.
+# Then it creates part of the SRA submission form table.
+#
+# Author: Erika Yashiro, Ph.D.
+# 
+# Last modified: 2 June, 2020
+# 
+###################################################################################################
+
+# Check if user is running in Bash or Shell
+if [ ! -n "$BASH" ]
+    then
+    echo "Please rerun this script with bash (bash), not shell (sh)."
+    echo ""
+    echo "Rerun the script with the -h or -help for more information."
+    exit 1
+fi
+
+# Set error check
+set -e
+set -o pipefail
+
+#########################################################
+# THREADS & HOST
+#########################################################
+
+# Define the maximum number of threads (cpus) to use.
+NUMTHREADS=5
+
+# Server name
+HOST=`hostname`
+
+# Maximum recommended number of threads to use
+MAXTHREADS=$((`nproc`-2))
+
+#########################################################
+# OTHER PARAMS
+#########################################################
+
+# Define location of script
+SCRIPTPATH="/space/admin/ey/Documents/p0001_amplicon_workflow_test/0_NGS_test/"
+
+# Define the location of the sequences folders
+SEQPATH="/space/sequences/"
+
+# Define script start date-time
+STARTTIME=$(date '+%Y%m%d-%H%M%S')
+
+# Import version number
+source $SCRIPTPATH/version.sh
+
+#########################################################
+# HELP
+#########################################################
+
+#if [[ $1 =~ ^(-h|-help)$ ]]  => only works with bash, not shell.
+Help_Function () {
+
+    echo ""
+    echo "############################################################################"
+    echo "#"
+    echo "# getseq4SRA"
+    echo "#"
+    echo "# This is a utility script in NGSeqProcTools version $VERSIONNUMBER"
+    echo "# "
+    echo "# This script retrieves the raw fastq files from a list of names in "
+    echo "# the samples file. Then it creates part of the SRA submission form"
+    echo "# table."
+    echo "#"
+    echo "#  Author: Erika Yashiro, Ph.D."
+    echo "#"
+    echo "#  Last modified: $MODIFIEDDATE"
+    echo "#"
+    echo "############################################################################"
+    echo ""
+    echo "To run this script, First go to an empty working directory with JUST "
+    echo "your samples list file. Then the following parameters are available:"
+    echo "  -i         Input samples list file. Same format as for AmpProc. [required]"
+    echo "  -m         Raw sequence retrieval mode [required]"
+    echo "                 - paired-end (PE)"
+    echo "                 - Read 1 only (R1)"
+    echo "                 - Read 2 only (R2)"
+    echo "  -d         Debug mode (optional)"
+    echo "  -v/-V      The tool's version number."
+    echo "  --version  "
+    echo "  -h/--help  To get this help message."
+    echo ""
+    echo "Have a nice day!"
+    echo ""
+    echo ""
+    exit 0
+}
+
+
+#########################################################
+# FUNCTIONS
+#########################################################
+
+echoWithDate() {
+  CURRENTTIME=[$(date '+%Y-%m-%d %H:%M:%S')]
+  #echo "[$(date '+%Y-%m-%d %H:%M:%S')]: $1"
+  echo "$CURRENTTIME: $1"
+  echo "$CURRENTTIME: $1" >> getseq4SRA-$STARTTIME.log
+}
+
+echoPlus() {
+  echo $1
+  echo $1 >> getseq4SRA-$STARTTIME.log
+}
+
+Cleanup_Function () {
+    rm -f samples_tmp.txt
+    rm -f tmpgz1 tmpgz2
+}
+
+Check_working_dir_Function () {
+
+# Check that samples file exists, if yes, make sure carriage return is not used.
+echoWithDate "Checking the presence of a \"samples\" file"
+
+if [ -f "samples" ]
+    then
+        # remove carriage returns, add newline at the end of file if it's not there, remove empty lines and white spaces.
+        cp $INFILE samples_tmp0.txt
+        dos2unix -q samples_tmp0.txt
+
+        if [ $DEBUG = "yes" ] 
+           then
+           if [ -f "samples_tmp0.txt" ]
+             then
+             echoPlus "Check_working_dir_Function: samples_tmp0.txt created"
+             else
+               echoPlus "Check_working_dir_Function: samples_tmp0.txt NOT created"
+           fi
+           
+        fi
+
+        cat samples_tmp0.txt | sed -e '$a\' | sed -e '/^$/d' -e 's/ //g' > samples_tmp.txt
+        rm samples_tmp0.txt
+        echoWithDate "    Done"
+    
+    else
+        echoPlus ""
+        echoPlus "Please make sure that you have a samples list file named \"samples\" in your current directory, and then run this script again."
+        echoPlus "You can also run the help function with the option -h or -help."
+        echoWithDate "    Exiting script."
+        echoPlus ""
+        exit 1
+fi    
+
+echoWithDate "    Done"
+}
+
+Tag_nonempty_files () {
+  # record read direction (R1 or R2)
+  READDIR=$1
+
+  if [ $DEBUG = "yes" ] 
+     then
+     echoPlus "Tag_nonempty_files function: var READDIR: $READDIR"
+     echoPlus "Tag_nonempty_files function: var filename: $NAME$SAMPLEDELIM*$READDIR*.gz"
+  fi
+
+  # Check if fasta file is non-empty
+  if [ ! -s "$FILEGZ" ]
+     then
+     echoWithDate "WARNING: Sample $NAME is empty or is misspelled and could not be retrieved. Empty sample name is flagged in the file empty-samples.txt"
+     echo "$NAME" >> empty-samples.txt
+     # remove sample from samples file
+     sed -i "/^$NAME$/d" samples_tmp.txt
+     # remove files from tmpdir if any
+     rm -f tmpdir/$NAME$SAMPLEDELIM*R1*.gz tmpdir/$NAME$SAMPLEDELIM*R2*.gz
+
+     if [ $DEBUG = "yes" ]
+       then
+       echoPlus "Tag_nonempty_files function: var NAME: $NAME"
+     fi
+     else
+       # If fastq.gz file(s) are good, then move to rawdata/
+       mv tmpdir/$NAME$SAMPLEDELIM*.gz rawdata/.
+  fi
+}
+
+
+Find_reads_phix_PE_Function () {
+  while read SAMPLES
+  do
+      # Retrieve sequenced reads
+      SAMPLEDELIM="_";
+      NAME=$SAMPLES;
+      find $SEQPATH -name $NAME$SAMPLEDELIM*R1*.gz 2>/dev/null -exec cp -t tmpdir/. {} \;
+      find $SEQPATH -name $NAME$SAMPLEDELIM*R2*.gz 2>/dev/null -exec cp -t tmpdir/. {} \;
+      if [ $DEBUG = "yes" ]
+         then
+         echoPlus "Find_reads_phix_PE function: var sample \$NAME\$SAMPLEDELIM: $NAME$SAMPLEDELIM"
+      fi
+      # Record file R1 name
+      FILEGZ=$(find tmpdir/. -type f -name $NAME$SAMPLEDELIM*R1*.gz)
+      echo "$FILEGZ" | sed "s/.*$NAME$SAMPLEDELIM/$NAME$SAMPLEDELIM/g" >> tmpgz1
+      # Record file R2 name
+      FILEGZ2=$(find tmpdir/. -type f -name $NAME$SAMPLEDELIM*R2*.gz)
+      echo "$FILEGZ2" | sed "s/.*$NAME$SAMPLEDELIM/$NAME$SAMPLEDELIM/g" >> tmpgz2
+      if [ $DEBUG = "yes" ]
+         then
+         echoPlus "Find_reads_phix_PE function: var FILEGZ: $FILEGZ"
+         echoPlus "Find_reads_phix_PE function: var FILEGZ2: $FILEGZ2"
+      fi
+
+      # Tag nonempty files and, if not, move files to rawdata/.
+      Tag_nonempty_files R1
+
+  done < samples_tmp.txt
+}
+
+Find_reads_phix_SR_Function () {
+  # Read R1 or R2
+  READDIR=$1
+  if [ $DEBUG = "yes" ]
+     then
+     echoPlus "Find_reads_phix_SR function: var READDIR: $READDIR"
+  fi
+  while read SAMPLES
+  do
+      # Retrieve sequenced reads
+      SAMPLEDELIM="_";
+      NAME=$SAMPLES;
+      find $SEQPATH -name $NAME$SAMPLEDELIM*$READDIR*.gz 2>/dev/null -exec cp -t tmpdir/. {} \;
+      if [ $DEBUG = "yes" ]
+         then
+         echoPlus "Find_reads_phix_SR function: var sample \$NAME\$SAMPLEDELIM: $NAME$SAMPLEDELIM"
+      fi
+      # Record file name
+      FILEGZ=$(find tmpdir/. -type f -name $NAME$SAMPLEDELIM*$READDIR*.gz)
+      echo "$FILEGZ" | sed "s/.*$NAME$SAMPLEDELIM/$NAME$SAMPLEDELIM/g" >> tmpgz1
+      if [ $DEBUG = "yes" ]
+         then
+         echoPlus "Find_reads_phix_SR function: var FILEGZ: $FILEGZ"
+      fi
+
+      # Tag nonempty files and, if not, move files to rawdata/.
+      Tag_nonempty_files $READDIR
+
+  done < samples_tmp.txt
+}
+
+
+Retrieve_sequence_files () {
+
+echoWithDate "Retrieving sequenced files."
+
+# Find the samples from the samples file
+# copy sample sequence files to current directory,
+
+  # Remove empty-samples.txt if present
+  if [ -e "empty-samples.txt" ]
+      then
+      rm -f empty-samples.txt
+  fi
+ 
+  # Create rawdata directory
+  mkdir rawdata
+  mkdir tmpdir
+
+  # Retrieve raw fastq reads
+  if [ $SEQMODE = "PE" ]
+    then
+    Find_reads_phix_PE_Function
+  fi
+  
+  if [ $SEQMODE = "R1" ]
+    then
+    Find_reads_phix_SR_Function R1
+  fi
+
+  if [ $SEQMODE = "R2" ]
+    then
+    Find_reads_phix_SR_Function R2
+  fi
+
+echoWithDate "    Done"
+}
+
+Make_SRA_table () {
+  # This function requires the samples_tmp.txt and tmpgz1, and tmpgz2 if PE
+  SAMPLEDELIM="_";
+  # create table template
+  printf "sample_name\tlibrary_ID\tfilename\tfilename2\n" > SRA_table.txt
+
+  # input sample data to SRA table.
+  while read SAMPLES
+  do
+  #SAMPLES == sample_name & library_ID
+  # filename1
+  FILENAME1=$(grep "$SAMPLES$SAMPLEDELIM" tmpgz1 | tr -d '\n')
+
+  if [ $SEQMODE = "PE" ]
+    then
+    FILENAME2=$(grep "$SAMPLES$SAMPLEDELIM" tmpgz2 | tr -d '\n')
+    else
+      FILENAME2="NA"
+  fi
+
+  printf "$SAMPLES\t$SAMPLES\t$FILENAME1\t$FILENAME2\n" >> SRA_table.txt
+  done < samples_tmp.txt
+
+}
+
+#########################################################
+# ARGUMENTS
+#########################################################
+
+# Arguments: help/h, presence of samples file, or debug
+
+#########################################################
+# MAIN WORKFLOW
+#########################################################
+
+if [[ "$1" =~ ^(-help|-h|--help)$ ]]
+   then
+   Help_Function
+fi
+
+if [[ "$1" =~ ^(-v|-V|--version)$ ]]
+   then
+   echo "NGSeqProcTools version $VERSIONNUMBER"
+   exit 0
+fi
+
+#if [[ "$1" =~ ^(-debug|--debug)$ ]]
+#   then
+#   DEBUG=yes
+#fi
+
+# set DEBUG to default no
+DEBUG="no"
+
+# print the full command used
+#echoPlus "Full command: "
+#echoPlus "$@"
+
+if [ $1 ]
+  then
+  echoWithDate ""
+  echoWithDate "Running getseq4SRA version $VERSIONNUMBER"
+  while getopts :dm:i: option
+    do
+    case "${option}"
+    in
+    m) SEQMODE=${OPTARG} ;;
+    i) INFILE=${OPTARG} ;;
+    d) DEBUG="yes" ;;
+    \?) echo ""
+        echo "Invalid option: -$OPTARG" >$2
+        echo "Check the help manual using the -help or -h"
+        echo "Exiting script."
+        echo ""
+        exit 1 ;;
+    :) echo ""
+       echo "Option -$OPTARG requires an argument"
+       echo "Check the help manual using the -help or -h"
+       echo "Exiting script."
+       echo ""
+       exit 2 ;;
+     esac
+   done
+
+   # print server name, input arguments
+   echoPlus "Which server ran getseq4SRA: $HOST"
+   echoPlus "Input file name: $INFILE"
+   echoPlus "sequences to retrieve: $SEQMODE"
+   echoPlus ""
+
+   if [ $DEBUG = "yes" ]
+     then
+      echoPlus ""
+      echoPlus "#####################"
+      echoPlus "Debug mode is active"
+      echoPlus "#####################"
+      echoPlus ""
+      echoPlus "var SEQMODE: $SEQMODE"
+      echoPlus "var INFILE: $INFILE"
+   fi
+
+   if [[ ! "$SEQMODE" =~ ^(PE|R1|R2)$ ]]
+      then
+      echoPlus ""
+      echoPlus "You need to specify whether you want to retrieve:"
+      echoPlus "   - R1 and R2 (PE)"
+      echoPlus "   - R1 only (R1)"
+      echoPlus "   - R2 only (R2)"
+      echoWithDate "Exiting script"
+      exit 3
+   fi
+   else
+     echoPlus "No parameters were given."
+     echoWithDate "Exiting script"
+     exit 4
+
+  if [ ! -f $INFILE ]
+    then
+    echoPlus ""
+    echoPlus "You need to specify a valid samples file name."
+    echoWithDate "Exiting script"
+    exit 4
+  fi
+fi
+
+
+
+# Check that samples file exists, if yes, make sure carriage return is not used.
+Check_working_dir_Function
+
+# Find and copy sample reads to rawdata/
+# Tag empty / non-existing sample names
+Retrieve_sequence_files
+
+# Build SRA table
+Make_SRA_table
+
+# Clean up temporary files
+#Cleanup_Function
+
+
