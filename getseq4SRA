@@ -124,6 +124,7 @@ echoPlus() {
 Cleanup_Function () {
     rm -f samples_tmp.txt
     rm -f tmpgz1 tmpgz2
+    rm -rf tmpdir
 }
 
 Check_working_dir_Function () {
