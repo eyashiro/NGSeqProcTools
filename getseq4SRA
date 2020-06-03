@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #VERSIONNUMBER=1.0
-MODIFIEDDATE="2 June, 2020"
+MODIFIEDDATE="3 June, 2020"
 
 ###################################################################################################
 #
@@ -49,7 +49,8 @@ MAXTHREADS=$((`nproc`-2))
 #########################################################
 
 # Define location of script
-SCRIPTPATH="/space/admin/ey/Documents/p0001_amplicon_workflow_test/0_NGS_test/"
+#SCRIPTPATH="/space/admin/ey/Documents/p0001_amplicon_workflow_test/0_NGS_test/"
+SCRIPTPATH="/space/sharedbin_ubuntu_14_04/Non_module_software/NGSeqProcTools_v1.0.0/"
 
 # Define the location of the sequences folders
 SEQPATH="/space/sequences/"
@@ -88,6 +89,7 @@ Help_Function () {
     echo "your samples list file. Then the following parameters are available:"
     echo "  -i         Input samples list file. Same format as for AmpProc. [required]"
     echo "  -m         Raw sequence retrieval mode [required]"
+    echo "             (PE/R1/R2)"
     echo "                 - paired-end (PE)"
     echo "                 - Read 1 only (R1)"
     echo "                 - Read 2 only (R2)"
