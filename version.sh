@@ -1,3 +1,3 @@
 #!/bin/bash
 
-VERSIONNUMBER=1.0
+VERSIONNUMBER=1.0.0
