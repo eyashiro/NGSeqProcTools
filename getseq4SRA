@@ -429,6 +429,6 @@ Retrieve_sequence_files
 Make_SRA_table
 
 # Clean up temporary files
-#Cleanup_Function
+Cleanup_Function
 
 
