@@ -88,6 +88,9 @@ Help_Function () {
    echo "   -v/-V --version  Output the script's version number and when the ID reference list was last updated"
    echo "   -h -help         Output the help information"
    echo ""
+   echo "Example: $ getseqID -i MQ190503-3 -x"
+   echo "         $ getseqID -f samples.txt -x"
+   echo ""
    exit 0
 }
 
