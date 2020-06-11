@@ -61,6 +61,9 @@ SCRIPTPATH=$(dirname $ABSOLUTEPATH)
 # OTHER PARAMS
 #########################################################
 
+# Import paths
+source $SCRIPTPATH/NGSeqProcToolsConfig.sh
+
 # Define location of script
 #SCRIPTPATH="/space/admin/ey/Documents/p0001_amplicon_workflow_test/0_NGS_test/"
 #SCRIPTPATH="/space/sharedbin_ubuntu_14_04/Non_module_software/NGSeqProcTools_v1.0.0/"
@@ -110,6 +113,13 @@ Help_Function () {
     echo "  -v/-V      The tool's version number."
     echo "  --version  "
     echo "  -h/--help  To get this help message."
+    echo ""
+    echo "Examples"
+    echo "   getseq4SRA -i samples.txt -m PE"
+    echo "      Debug mode:"
+    echo "   getseq4SRA -i samples.txt -m PE -d"
+    echo "      Obtain version number:"
+    echo "   getseq4SRA -v"
     echo ""
     echo "Have a nice day!"
     echo ""
