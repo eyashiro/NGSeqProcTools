@@ -78,6 +78,7 @@ Help_Function () {
     echo "# getseqID"
     echo "#"
     echo "# This is a utility script in NGSeqProcTools version $VERSIONNUMBER"
+    echo "# https://github.com/eyashiro/NGSeqProcTools"
     echo "#"
     echo "# This script retrieves the LIB and Sequence IDs from either the LIB or "
     echo "# SEQ ID user query."

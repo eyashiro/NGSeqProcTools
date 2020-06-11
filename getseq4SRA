@@ -90,6 +90,7 @@ Help_Function () {
     echo "# getseq4SRA"
     echo "#"
     echo "# This is a utility script in NGSeqProcTools version $VERSIONNUMBER"
+    echo "# https://github.com/eyashiro/NGSeqProcTools"
     echo "# "
     echo "# This script retrieves the raw fastq files from a list of names in "
     echo "# the samples file. Then it creates part of the SRA submission form"
