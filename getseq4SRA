@@ -94,7 +94,7 @@ Help_Function () {
     echo "# "
     echo "# This script retrieves the raw fastq files from a list of names in "
     echo "# the samples file. Then it creates part of the SRA submission form"
-    echo "# table."
+    echo "# table in tab-delimited format."
     echo "#"
     echo "#  Author: Erika Yashiro, Ph.D."
     echo "#"
