@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #VERSIONNUMBER=
-MODIFIEDDATE="3 June 2020"
+MODIFIEDDATE="11 June 2020"
 
 ###################################################################################################
 #
@@ -30,17 +30,31 @@ fi
 set -e
 set -o pipefail
 
+########################
+# PATH TO NGSeqProcTools
+########################
+
+# record path to symlink of NGSeqProcTools executables
+PATHTOSYMLINK=$(which getseq4SRA)
+
+# Get absolute path to executables
+ABSOLUTEPATH=$(readlink -f $PATHTOSYMLINK)
+
+# Strip the script name
+SCRIPTPATH=$(dirname $ABSOLUTEPATH)
+
 #############
 # PARAMETERS
 #############
 
-SCRIPTPATH=
-
 # Import version number
 source $SCRIPTPATH/version.sh
 
+# Import paths
+source $SCRIPTPATH/NGSeqProcToolsConfig.sh
+
 # Define the location of the sequences folders
-SEQPATH="/space/sequences/"
+#SEQPATH="/space/sequences/"
 
 # Define script start date-time
 STARTTIME=$(date '+%Y%m%d-%H%M%S')
@@ -49,8 +63,8 @@ STARTTIME=$(date '+%Y%m%d-%H%M%S')
 
 # Reference seqID/libID list location and file name
 #REFPATH=/home/erika/Documents/test_LIB/tmpout3
-REFPATH=/space/HiSeqUser/SeqLibID_reference
-REFLIST=SeqLibID.txt
+#REFPATH=
+#REFLIST=
 
 #########################################################
 # HELP
