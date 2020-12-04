@@ -185,6 +185,7 @@ if [ "$UPDATEREF" != "no" ]
   echo "Updating the list of SeqIDs and LibIDs..."
   find $SEQPATH -name "STATS*.txt" -exec sed -n '/\[Data\]/,/bcl2fastq command line/p' {} \; | sed -e '/\[Data\]/d' -e '/bcl2fastq command line/d' -e '/Sample_ID,Sample_Name,index,index2,Description/d' -e '/^$/d' > $REFPATH/$REFLIST
   date > $REFPATH/version.txt
+  chmod a+rw $REFPATH/$REFLIST $REFPATH/version.txt
   echo "   Done."
   echo ""
   else
