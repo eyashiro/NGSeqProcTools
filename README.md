@@ -1,12 +1,12 @@
 # README
 
-Last modified: 11 June, 2020
+Last modified: 4 December, 2020
 
 Author: Erika Yashiro, Ph.D.
 
 Repository name: NGSeqProcTools
 
-Version 1.1.0
+Version 1.1.1
 
 ########################################
 ### Contents
@@ -47,13 +47,18 @@ https://github.com/eyashiro/NGSeqProcTools
 
 # VERSION HISTORY
 
+NGSeqProcTools v1.1.1
+Released for user evaluation: 4 December 2020
+- Fixed the permission issue on getseqID so that multiple users can update the refDB without the permission denied error.  
+
+
 NGSeqProcTools v1.1.0
 Released for user evaluation:  11 June 2020
 - This is the official github version-controlled release.
 - getseqID is now transferred to NGSeqProcTools. it was previously a tool in the AmpProc repository.
 - getseqID and getseq4SRA both determine location of the scripts automatically.
 - These scripts also now use a config file containing the paths to different required resources. The template file for this is NGSeqProcToolsConfig_template.sh
-- The help functions of getseqID and getseq4SRA were updated and also now contains examples of commands.
+- The help functions of getseqID and getseq4SRA were updated and also now contains examples of commands.  
 
 
 NGSeqProcTools v1.0.0
